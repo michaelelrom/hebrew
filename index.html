@@ -339,7 +339,7 @@ const CONTENT = [
 // App
 // ============================================================
 // Bump on every push so we can tell from the header which version a phone has.
-const APP_VERSION = "v5 · Nov 2";
+const APP_VERSION = "v6 · Nov 2";
 document.getElementById("version").textContent = APP_VERSION;
 
 const STORE_KEY = "hebrew-flashcards-v1";
@@ -472,13 +472,16 @@ document.querySelectorAll("nav.tabs button").forEach(b => b.addEventListener("cl
 }));
 
 // ---------- Cards ----------
-let deck = null, deckIdx = 0, flipped = false, deckStats = { known: 0, learning: 0 };
+// deckMarks[i] is what was answered for card i this pass, so going back and re-answering doesn't double count.
+let deck = null, deckIdx = 0, flipped = false, deckMarks = [];
 function resetDeck(doShuffle = false) {
   let ws = selectedWords();
   if (state.cardFilter === "learning") ws = ws.filter(w => statusOf(w) !== "known");
   deck = doShuffle ? shuffle(ws) : ws;
-  deckIdx = 0; flipped = false; deckStats = { known: 0, learning: 0 };
+  deckIdx = 0; flipped = false; deckMarks = [];
 }
+function deckCount(st) { return deckMarks.filter(m => m === st).length; }
+const backBtn = () => `<button class="btn sm ghost" data-act="back">‹ Back</button>`;
 function renderCards() {
   if (!deck) resetDeck();
   const filterSeg = `<div class="seg" role="group" aria-label="Which cards">
@@ -495,19 +498,20 @@ function renderCards() {
   }
   if (deckIdx >= deck.length) {
     html += `<div class="card done"><h2>Nice work! 🎉</h2><p class="muted">You went through ${deck.length} card${deck.length === 1 ? "" : "s"}.</p>
-      <div class="stats"><div><b style="color:var(--good)">${deckStats.known}</b><span class="small muted">I know it</span></div>
-      <div><b style="color:var(--warn)">${deckStats.learning}</b><span class="small muted">Still learning</span></div></div>
+      <div class="stats"><div><b style="color:var(--good)">${deckCount("known")}</b><span class="small muted">I know it</span></div>
+      <div><b style="color:var(--warn)">${deckCount("learning")}</b><span class="small muted">Still learning</span></div></div>
       <div class="row" style="justify-content:center;flex-wrap:wrap">
         <button class="btn primary" data-act="again">Go again</button>
-        ${deckStats.learning ? `<button class="btn" data-filter="learning">Just the ones I'm learning</button>` : ""}
-      </div></div>`;
+        ${deckCount("learning") ? `<button class="btn" data-filter="learning">Just the ones I'm learning</button>` : ""}
+      </div>
+      <div style="margin-top:12px">${backBtn()}</div></div>`;
     return html;
   }
   const w = deck[deckIdx];
   const st = statusOf(w);
   const tag = st === "known" ? `<span class="status-tag known">Known</span>` : st === "learning" ? `<span class="status-tag learning">Learning</span>` : "";
   html += `<div class="progress"><div style="width:${(deckIdx / deck.length) * 100}%"></div></div>`;
-  html += `<div class="row small muted" style="margin-bottom:8px"><span>Card ${deckIdx + 1} of ${deck.length}</span><span class="spacer"></span>${tag}</div>`;
+  html += `<div class="row small muted" style="margin-bottom:8px;min-height:34px">${deckIdx > 0 ? backBtn() : ""}<span>Card ${deckIdx + 1} of ${deck.length}</span><span class="spacer"></span>${tag}</div>`;
   html += `<div class="card flash" data-act="flip" role="button" aria-label="Flip card">
       ${heSpan(w.he, "big")}
       ${flipped
@@ -687,7 +691,7 @@ view.addEventListener("click", e => {
   if (d.mark) {
     const w = deck[deckIdx];
     setStatus(w, d.mark);
-    deckStats[d.mark]++;
+    deckMarks[deckIdx] = d.mark;
     deckIdx++; flipped = false; render(); return;
   }
   if (d.reveal) { revealed.has(d.reveal) ? revealed.delete(d.reveal) : revealed.add(d.reveal); render(); return; }
@@ -703,6 +707,7 @@ view.addEventListener("click", e => {
 
   switch (d.act) {
     case "flip": flipped = !flipped; render(); break;
+    case "back": if (deckIdx > 0) { deckIdx--; flipped = false; render(); } break;
     case "shuffle": resetDeck(true); render(); toast("Shuffled"); break;
     case "again": resetDeck(true); render(); break;
     case "next":
