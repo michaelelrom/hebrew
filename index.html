@@ -366,7 +366,7 @@ const CONTENT = [
 // App
 // ============================================================
 // Bump on every push so we can tell from the header which version a phone has.
-const APP_VERSION = "v8 · Nov 2";
+const APP_VERSION = "v9 · Nov 2";
 document.getElementById("version").textContent = APP_VERSION;
 
 const STORE_KEY = "hebrew-flashcards-v1";
@@ -756,6 +756,38 @@ const VOWEL_LIST = [
   { g: "בֱּ", name: "Hataf Segol", sound: "e", hint: "a quick \"e\"", match: "ֱ" },
   { g: "בֳּ", name: "Hataf Kamatz", sound: "o", hint: "a quick \"o\"", match: "ֳ" }
 ];
+// Dots that aren't regular vowels. examples: words to show (always with marks).
+const DOTS = [
+  { title: "Dagesh: a dot inside a letter", glyphs: "בּ ב · כּ כ · פּ פ",
+    body: "It only changes the sound of three letters: בּ = b but ב = v, כּ = k but כ = ch, פּ = p but פ = f.",
+    examples: ["אַבָּא", "כֶּלֶב", "סֵפֶר"] },
+  { title: "Dagesh on other letters", glyphs: "דּ מּ שּׁ תּ",
+    body: "On every other letter, a dagesh doesn't change the sound, so you can ignore it when reading. דּ is still \"d\" and תּ is still \"t.\"",
+    examples: ["יַלְדָּה", "אִמָּא", "אִשָּׁה"] },
+  { title: "The Shin/Sin dot", glyphs: "שׁ שׂ",
+    body: "Look at the top of ש. Dot on the right is Shin (\"sh\"). Dot on the left is Sin (\"s\").",
+    examples: ["שָׁלוֹם", "עֶשֶׂר"] },
+  { title: "Dots that make ו a vowel", glyphs: "וֹ וּ",
+    body: "A dot on top (וֹ) makes \"o.\" A dot in the middle (וּ) makes \"u.\" These are vowels, and the ו doesn't say \"v.\"",
+    examples: ["שָׁלוֹם", "חָתוּל"] },
+  { title: "A dot above another letter", glyphs: "לֹ",
+    body: "A dot at the top left of a letter (not ש) is Holam, an \"o\" vowel.",
+    examples: ["לֹא"] }
+];
+// Counting forms: the ones used for counting, phone numbers, prices and time.
+const NUMBERS = [
+  { n: 0, he: "אֶפֶס", pron: "E-fes" },
+  { n: 1, he: "אַחַת", pron: "a-CHAT" },
+  { n: 2, he: "שְׁתַּיִם", pron: "SHTA-yim" },
+  { n: 3, he: "שָׁלוֹשׁ", pron: "sha-LOSH" },
+  { n: 4, he: "אַרְבַּע", pron: "AR-ba" },
+  { n: 5, he: "חָמֵשׁ", pron: "cha-MESH" },
+  { n: 6, he: "שֵׁשׁ", pron: "shesh" },
+  { n: 7, he: "שֶׁבַע", pron: "SHE-va" },
+  { n: 8, he: "שְׁמוֹנֶה", pron: "shmo-NE" },
+  { n: 9, he: "תֵּשַׁע", pron: "TE-sha" },
+  { n: 10, he: "עֶשֶׂר", pron: "E-ser" }
+];
 let abMode = "letters", abSel = null;
 // Letters/vowels here always keep their marks, even with "Vowel marks" off.
 function rawHe(s, cls = "") { return `<span class="he ${cls}" lang="he" dir="rtl">${esc(s)}</span>`; }
@@ -766,8 +798,36 @@ function renderAlefBet() {
   let html = `<div class="deck-head"><div class="seg" role="group" aria-label="Letters or vowels">
       <button data-ab="letters" aria-pressed="${abMode === "letters"}">Letters</button>
       <button data-ab="vowels" aria-pressed="${abMode === "vowels"}">Vowels</button>
+      <button data-ab="dots" aria-pressed="${abMode === "dots"}">Dots</button>
+      <button data-ab="numbers" aria-pressed="${abMode === "numbers"}">Numbers</button>
     </div></div>`;
   const words = allWords();
+
+  if (abMode === "dots") {
+    html += `<div class="callout"><b>Quick rule:</b> a dot <b>under</b> a letter is a vowel. A dot <b>inside</b> a letter is a dagesh. A dot <b>on top</b> is either the Shin/Sin dot (on ש) or an \"o\" sound.</div>`;
+    html += `<div class="card wl">` + DOTS.map(d => `<div class="vowel-row" style="align-items:flex-start">
+        <div class="info">
+          <div style="font-weight:600">${esc(d.title)}</div>
+          <div style="margin:4px 0 6px">${rawHe(d.glyphs, "")}</div>
+          <div class="small">${esc(d.body)}</div>
+          <div class="ab-ex" style="justify-content:flex-start;margin-top:8px">${d.examples.map(he => {
+            const w = words.find(x => x.he === he) || NUMBERS.find(x => x.he === he);
+            return `<span class="chip" data-speak="${esc(he)}">${rawHe(he)}${w ? " " + esc(w.mean || String(w.n)) : ""}</span>`;
+          }).join("")}</div>
+        </div></div>`).join("") + `</div>`;
+    return html;
+  }
+
+  if (abMode === "numbers") {
+    html += `<div class="callout">These are the forms you use for counting, phone numbers and prices. Tap 🔊 to hear each one.</div>`;
+    html += `<div class="card wl">` + NUMBERS.map(x => `<div class="wl-item" style="cursor:default">
+        <div style="font-size:30px;font-weight:600;min-width:44px;text-align:center;color:var(--accent)">${x.n}</div>
+        ${heSpan(x.he)}
+        <div class="info"><div class="m">${esc(x.pron)}</div></div>
+        <button class="hear" data-speak="${esc(x.he)}" aria-label="Hear ${x.n}">🔊</button>
+      </div>`).join("") + `</div>`;
+    return html;
+  }
 
   if (abMode === "vowels") {
     html += `<div class="callout">Modern Hebrew has just <b>5 vowel sounds</b>: a, e, i, o, u. Several marks make the same sound, so you only need to learn which sound each one makes.</div>`;
