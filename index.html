@@ -217,6 +217,32 @@
   .wl-letters .ltile { background: var(--surface); }
   .wl-item { cursor: pointer; }
 
+  /* Alef-Bet */
+  .ab-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: 8px; direction: rtl; }
+  .ab-tile {
+    display: flex; flex-direction: column; align-items: center; direction: ltr;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 6px 4px 8px;
+    box-shadow: var(--shadow);
+  }
+  .ab-tile[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+  .ab-tile .he { font-size: 40px; line-height: 1.2; }
+  .ab-tile .ln { font-size: 13px; font-weight: 500; }
+  .ab-tile .ls { font-size: 12px; color: var(--muted); }
+  .ab-detail { padding: 18px; margin-bottom: 14px; text-align: center; }
+  .ab-detail .big { font-size: 80px; line-height: 1.1; color: var(--accent); }
+  .ab-detail .name { font-size: 22px; font-weight: 600; }
+  .ab-detail .snd { font-size: 17px; margin: 2px 0 8px; }
+  .ab-detail .tip { font-size: 15px; background: var(--surface-2); border-radius: 12px; padding: 10px 12px; margin: 10px auto 0; max-width: 440px; }
+  .ab-ex { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: 12px; }
+  .ab-ex .chip { cursor: pointer; }
+  .look { padding: 4px 0; }
+  .look .wl-item .he { min-width: 0; font-size: 34px; letter-spacing: 8px; }
+  .vowel-row { display: flex; align-items: center; gap: 14px; padding: 12px 14px; border-top: 1px solid var(--line); }
+  .vowel-row:first-child { border-top: 0; }
+  .vowel-row .he { font-size: 44px; min-width: 64px; text-align: center; color: var(--accent); }
+  .vowel-row .info { flex: 1; }
+  .callout { background: var(--accent-soft); border-radius: 14px; padding: 12px 14px; margin-bottom: 14px; font-size: 15px; }
+
   .toast {
     position: fixed; left: 50%; transform: translateX(-50%);
     bottom: calc(env(safe-area-inset-bottom) + 84px);
@@ -247,6 +273,7 @@
     <button role="tab" data-tab="sentences"><span class="ico">💬</span>Sentences</button>
     <button role="tab" data-tab="quiz"><span class="ico">✅</span>Quiz</button>
     <button role="tab" data-tab="words"><span class="ico">📖</span>All words</button>
+    <button role="tab" data-tab="alefbet"><span class="ico he" lang="he" style="font-weight:700">אב</span>Alef-Bet</button>
   </div>
 </nav>
 
@@ -339,7 +366,7 @@ const CONTENT = [
 // App
 // ============================================================
 // Bump on every push so we can tell from the header which version a phone has.
-const APP_VERSION = "v6 · Nov 2";
+const APP_VERSION = "v7 · Nov 2";
 document.getElementById("version").textContent = APP_VERSION;
 
 const STORE_KEY = "hebrew-flashcards-v1";
@@ -511,7 +538,7 @@ function renderCards() {
   const st = statusOf(w);
   const tag = st === "known" ? `<span class="status-tag known">Known</span>` : st === "learning" ? `<span class="status-tag learning">Learning</span>` : "";
   html += `<div class="progress"><div style="width:${(deckIdx / deck.length) * 100}%"></div></div>`;
-  html += `<div class="row small muted" style="margin-bottom:8px;min-height:34px">${deckIdx > 0 ? backBtn() : ""}<span>Card ${deckIdx + 1} of ${deck.length}</span><span class="spacer"></span>${tag}</div>`;
+  html += `<div class="row small muted" style="margin-bottom:8px;min-height:34px">${deckIdx > 0 ? backBtn() : ""}<span>Card ${deckIdx + 1} of ${deck.length}</span>${tag}<span class="spacer"></span><button class="btn sm ghost" data-act="forward">Next ›</button></div>`;
   html += `<div class="card flash" data-act="flip" role="button" aria-label="Flip card">
       ${heSpan(w.he, "big")}
       ${flipped
@@ -668,6 +695,115 @@ function renderWords() {
   return html;
 }
 
+// ---------- Alef-Bet ----------
+// g: glyph, name, say: Hebrew name for text-to-speech, sound, tip.
+const ALEFBET = [
+  { g: "א", name: "Alef", say: "אָלֶף", sound: "silent", tip: "Makes no sound. It just holds a vowel, like in אִמָּא." },
+  { g: "בּ", name: "Bet", say: "בֵּית", sound: "b", tip: "With a dot inside it's \"b.\"" },
+  { g: "ב", name: "Vet", say: "וֵית", sound: "v", tip: "No dot: \"v.\" Look-alike: כ is rounder, with no little tail at the bottom." },
+  { g: "ג", name: "Gimel", say: "גִּימֶל", sound: "g", tip: "Always a hard \"g,\" like \"go.\" Look-alike: נ." },
+  { g: "ד", name: "Dalet", say: "דָּלֶת", sound: "d", tip: "Look-alike: ר. Dalet has a sharp corner sticking out at the top right." },
+  { g: "ה", name: "Hey", say: "הֵא", sound: "h", tip: "Silent at the end of a word, like in תּוֹדָה. Look-alike: ח is closed at the top left; ה has a gap." },
+  { g: "ו", name: "Vav", say: "וָו", sound: "v, o, u", tip: "Usually \"v.\" With a dot on top (וֹ) it's \"o.\" With a dot in the middle (וּ) it's \"u.\"" },
+  { g: "ז", name: "Zayin", say: "זַיִן", sound: "z", tip: "Look-alike: ו is a plain line. Zayin has a little cap on top." },
+  { g: "ח", name: "Chet", say: "חֵית", sound: "ch", tip: "Throaty \"ch,\" like in \"Bach.\" Look-alike: ה has a gap at the top left." },
+  { g: "ט", name: "Tet", say: "טֵית", sound: "t", tip: "Sounds just like ת." },
+  { g: "י", name: "Yod", say: "יוֹד", sound: "y", tip: "The smallest letter. It floats up high, like an apostrophe. Look-alike: ו goes all the way down." },
+  { g: "כּ", name: "Kaf", say: "כַּף", sound: "k", tip: "With a dot inside it's \"k.\"" },
+  { g: "כ", name: "Chaf", say: "כַף", sound: "ch", tip: "No dot: throaty \"ch,\" the same sound as ח." },
+  { g: "ך", name: "Final Chaf", say: "כַף סוֹפִית", sound: "ch", tip: "How כ looks at the end of a word. It drops below the line." },
+  { g: "ל", name: "Lamed", say: "לָמֶד", sound: "l", tip: "The tallest letter. It sticks up above the others." },
+  { g: "מ", name: "Mem", say: "מֵם", sound: "m" },
+  { g: "ם", name: "Final Mem", say: "מֵם סוֹפִית", sound: "m", tip: "How מ looks at the end of a word, like in שָׁלוֹם. Look-alike: ס is round; ם is square." },
+  { g: "נ", name: "Nun", say: "נוּן", sound: "n", tip: "Look-alike: ג has a little foot sticking out to the left." },
+  { g: "ן", name: "Final Nun", say: "נוּן סוֹפִית", sound: "n", tip: "How נ looks at the end of a word. Look-alike: ו, but ן drops below the line." },
+  { g: "ס", name: "Samech", say: "סָמֶךְ", sound: "s", tip: "Look-alike: ם (Final Mem) is square; ס is round." },
+  { g: "ע", name: "Ayin", say: "עַיִן", sound: "silent", tip: "Silent in modern Hebrew, like א. It holds a vowel." },
+  { g: "פּ", name: "Pe", say: "פֵּא", sound: "p", tip: "With a dot inside it's \"p.\"" },
+  { g: "פ", name: "Fe", say: "פֵא", sound: "f", tip: "No dot: \"f,\" like in סֵפֶר." },
+  { g: "ף", name: "Final Fe", say: "פֵא סוֹפִית", sound: "f", tip: "How פ looks at the end of a word." },
+  { g: "צ", name: "Tsadi", say: "צָדִי", sound: "ts", tip: "\"ts,\" like the end of \"cats.\"" },
+  { g: "ץ", name: "Final Tsadi", say: "צָדִי סוֹפִית", sound: "ts", tip: "How צ looks at the end of a word." },
+  { g: "ק", name: "Kuf", say: "קוֹף", sound: "k", tip: "Sounds just like כּ. Its leg drops below the line." },
+  { g: "ר", name: "Resh", say: "רֵישׁ", sound: "r", tip: "Look-alike: ד has a sharp corner; ר is smoothly rounded." },
+  { g: "שׁ", name: "Shin", say: "שִׁין", sound: "sh", tip: "Dot on the right: \"sh.\"" },
+  { g: "שׂ", name: "Sin", say: "שִׂין", sound: "s", tip: "Dot on the left: \"s.\"" },
+  { g: "ת", name: "Tav", say: "תָּו", sound: "t", tip: "Always \"t,\" with or without a dot inside." }
+];
+const LOOKALIKES = [
+  ["י ו", "Yod is short and floats up high. Vav goes all the way down."],
+  ["ו ז ן", "Vav is a plain line. Zayin has a cap. Final Nun drops below the line."],
+  ["ב כ", "Bet has a little tail at the bottom right. Chaf is round."],
+  ["ד ר", "Dalet has a sharp corner. Resh is rounded."],
+  ["ה ח ת", "Hey has a gap at the top left. Chet is closed. Tav has a foot at the bottom left."],
+  ["ג נ", "Gimel has a foot sticking out. Nun is a closed bend."],
+  ["ס ם", "Samech is round. Final Mem is square."],
+  ["ע צ", "Ayin is like a y with two arms. Tsadi has a flat bottom."]
+];
+// g: vowel on a placeholder בּ. match: the mark (string) or a pattern (regex) for finding example words.
+const VOWEL_LIST = [
+  { g: "בָּ", name: "Kamatz", sound: "a", hint: "as in \"father\"", match: "ָ" },
+  { g: "בַּ", name: "Patach", sound: "a", hint: "as in \"father\"", match: "ַ" },
+  { g: "בֶּ", name: "Segol", sound: "e", hint: "as in \"bed\"", match: "ֶ" },
+  { g: "בֵּ", name: "Tsere", sound: "e", hint: "as in \"bed\"", match: "ֵ" },
+  { g: "בִּ", name: "Hiriq", sound: "i", hint: "as in \"ski\"", match: "ִ" },
+  { g: "בֹּ", name: "Holam", sound: "o", hint: "as in \"go\"", match: /[א-הז-ת][ְ-ׂ]*ֹ/ },
+  { g: "בּוֹ", name: "Holam with Vav", sound: "o", hint: "as in \"go\"", match: /וֹ/ },
+  { g: "בֻּ", name: "Kubutz", sound: "u", hint: "as in \"tune\"", match: "ֻ" },
+  { g: "בּוּ", name: "Shuruk", sound: "u", hint: "as in \"tune\"", match: /וּ(?![ְ-ֻ])/ },
+  { g: "בְּ", name: "Shva", sound: "silent or quick e", hint: "usually silent in the middle of a word", match: "ְ" },
+  { g: "בֲּ", name: "Hataf Patach", sound: "a", hint: "a quick \"a\"", match: "ֲ" },
+  { g: "בֱּ", name: "Hataf Segol", sound: "e", hint: "a quick \"e\"", match: "ֱ" },
+  { g: "בֳּ", name: "Hataf Kamatz", sound: "o", hint: "a quick \"o\"", match: "ֳ" }
+];
+let abMode = "letters", abSel = null;
+// Letters/vowels here always keep their marks, even with "Vowel marks" off.
+function rawHe(s, cls = "") { return `<span class="he ${cls}" lang="he" dir="rtl">${esc(s)}</span>`; }
+function exampleChips(ws) {
+  return ws.slice(0, 6).map(w => `<span class="chip" data-speak="${esc(w.he)}">${heSpan(w.he)} ${esc(w.mean)}</span>`).join("");
+}
+function renderAlefBet() {
+  let html = `<div class="deck-head"><div class="seg" role="group" aria-label="Letters or vowels">
+      <button data-ab="letters" aria-pressed="${abMode === "letters"}">Letters</button>
+      <button data-ab="vowels" aria-pressed="${abMode === "vowels"}">Vowels</button>
+    </div></div>`;
+  const words = allWords();
+
+  if (abMode === "vowels") {
+    html += `<div class="callout">Modern Hebrew has just <b>5 vowel sounds</b>: a, e, i, o, u. Several marks make the same sound, so you only need to learn which sound each one makes.</div>`;
+    html += `<div class="card wl">` + VOWEL_LIST.map(v => {
+      const ex = words.filter(w => typeof v.match === "string" ? w.he.includes(v.match) : v.match.test(w.he));
+      return `<div class="vowel-row">${rawHe(v.g)}<div class="info">
+          <div class="m" style="font-weight:500">${esc(v.name)}: <b>${esc(v.sound)}</b></div>
+          <div class="small muted">${esc(v.hint)}</div>
+          ${ex.length ? `<div class="ab-ex" style="justify-content:flex-start;margin-top:6px">${exampleChips(ex.slice(0, 3))}</div>` : ""}
+        </div></div>`;
+    }).join("") + `</div>`;
+    return html;
+  }
+
+  const sel = ALEFBET.find(l => l.g === abSel);
+  if (sel) {
+    const ex = words.filter(w => breakdown(w.he).some(b => b.name === sel.name));
+    html += `<div class="card ab-detail">
+      ${rawHe(sel.g, "big")}
+      <div class="name">${esc(sel.name)}</div>
+      <div class="snd">Sound: <b>${esc(sel.sound)}</b></div>
+      ${hearBtn(sel.say)}
+      ${sel.tip ? `<div class="tip">${esc(sel.tip)}</div>` : ""}
+      ${ex.length ? `<div class="small muted" style="margin-top:12px">In your words:</div><div class="ab-ex">${exampleChips(ex)}</div>` : ""}
+    </div>`;
+  } else {
+    html += `<p class="tap-hint" style="margin:0 4px 12px">Tap a letter to hear its name and learn more. Hebrew reads right to left, so א is first.</p>`;
+  }
+  html += `<div class="ab-grid">` + ALEFBET.map(l =>
+    `<button class="ab-tile" data-letter="${esc(l.g)}" aria-pressed="${l.g === abSel}">${rawHe(l.g)}<span class="ln">${esc(l.name)}</span><span class="ls">${esc(l.sound)}</span></button>`
+  ).join("") + `</div>`;
+  html += `<div class="group-title" style="margin-top:22px">Look-alikes</div><div class="card wl look">` +
+    LOOKALIKES.map(([g, t]) => `<div class="wl-item" style="cursor:default">${rawHe(g)}<div class="info small">${esc(t)}</div></div>`).join("") + `</div>`;
+  return html;
+}
+
 // ---------- Render + events ----------
 const view = document.getElementById("view");
 function render() {
@@ -675,6 +811,7 @@ function render() {
   view.innerHTML = state.tab === "cards" ? renderCards()
     : state.tab === "sentences" ? renderSentences()
     : state.tab === "quiz" ? renderQuiz()
+    : state.tab === "alefbet" ? renderAlefBet()
     : renderWords();
 }
 
@@ -682,10 +819,16 @@ view.addEventListener("click", e => {
   const speakEl = e.target.closest("[data-speak]");
   if (speakEl) { e.stopPropagation(); speak(speakEl.dataset.speak); return; }
 
-  const t = e.target.closest("[data-act],[data-mark],[data-filter],[data-reveal],[data-opt],[data-dir],[data-word]");
+  const t = e.target.closest("[data-act],[data-mark],[data-filter],[data-reveal],[data-opt],[data-dir],[data-word],[data-ab],[data-letter]");
   if (!t) return;
   const d = t.dataset;
 
+  if (d.ab) { abMode = d.ab; render(); return; }
+  if (d.letter) {
+    const l = ALEFBET.find(x => x.g === d.letter);
+    if (abSel === d.letter) { abSel = null; } else { abSel = d.letter; speak(l.say); }
+    render(); window.scrollTo({ top: 0, behavior: "smooth" }); return;
+  }
   if (d.word) { openWords.has(d.word) ? openWords.delete(d.word) : openWords.add(d.word); render(); return; }
   if (d.filter) { state.cardFilter = d.filter; saveState(); resetDeck(); render(); return; }
   if (d.mark) {
@@ -708,6 +851,7 @@ view.addEventListener("click", e => {
   switch (d.act) {
     case "flip": flipped = !flipped; render(); break;
     case "back": if (deckIdx > 0) { deckIdx--; flipped = false; render(); } break;
+    case "forward": if (deckIdx < deck.length) { deckIdx++; flipped = false; render(); } break;
     case "shuffle": resetDeck(true); render(); toast("Shuffled"); break;
     case "again": resetDeck(true); render(); break;
     case "next":
