@@ -231,7 +231,7 @@
 <body>
 <header>
   <div class="bar">
-    <div class="title"><span class="he" lang="he">עִבְרִית</span> Hebrew</div>
+    <div class="title"><span class="he" lang="he">עִבְרִית</span> Hebrew <span class="small muted" id="version" style="font-weight:400"></span></div>
     <button class="pill" id="vowelBtn" aria-pressed="true">Vowel marks</button>
   </div>
   <div class="controls">
@@ -338,6 +338,10 @@ const CONTENT = [
 // ============================================================
 // App
 // ============================================================
+// Bump on every push so we can tell from the header which version a phone has.
+const APP_VERSION = "v5 · Nov 2";
+document.getElementById("version").textContent = APP_VERSION;
+
 const STORE_KEY = "hebrew-flashcards-v1";
 const ALL = "all";
 
