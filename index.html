@@ -341,7 +341,7 @@ const CONTENT = [
 const STORE_KEY = "hebrew-flashcards-v1";
 const ALL = "all";
 
-const defaults = { progress: {}, vowels: true, set: CONTENT[CONTENT.length - 1].id, tab: "cards", quizDir: "he-en", cardFilter: "all" };
+const defaults = { progress: {}, best: {}, vowels: true, set: CONTENT[CONTENT.length - 1].id, tab: "cards", quizDir: "he-en", cardFilter: "all" };
 let state = loadState();
 
 function loadState() {
@@ -541,31 +541,79 @@ function renderSentences() {
 }
 
 // ---------- Quiz ----------
-let quiz = null, quizScore = { right: 0, total: 0 }, lastQuizWord = null;
-function resetQuiz() { quiz = null; quizScore = { right: 0, total: 0 }; }
-function newQuestion() {
-  const pool = selectedWords();
-  if (pool.length === 0) { quiz = null; return; }
-  let cands = pool.filter(w => key(w.setId, w.id) !== lastQuizWord);
-  if (cands.length === 0) cands = pool;
-  // Lean a little toward words that aren't known yet.
-  const weighted = cands.flatMap(w => statusOf(w) === "known" ? [w] : [w, w]);
-  const answer = weighted[Math.floor(Math.random() * weighted.length)];
-  lastQuizWord = key(answer.setId, answer.id);
-  let distractPool = pool.filter(w => w !== answer && w.mean !== answer.mean);
-  if (distractPool.length < 3) distractPool = allWords().filter(w => !(w.setId === answer.setId && w.id === answer.id) && w.mean !== answer.mean);
-  const options = shuffle([answer, ...shuffle(distractPool).slice(0, 3)]);
-  quiz = { answer, options, picked: null };
+const ROUND_LEN = 15;
+// round: { words, i, right, missed, practice, q: { answer, options, picked } }; q is null when the round is over.
+let round = null;
+function resetQuiz() { round = null; }
+const sameWord = (a, b) => a.setId === b.setId && a.id === b.id;
+
+// Pick one word, leaning toward words that aren't marked "I know it" yet.
+function weightedPick(ws) {
+  const weighted = ws.flatMap(w => statusOf(w) === "known" ? [w] : [w, w]);
+  return weighted[Math.floor(Math.random() * weighted.length)];
 }
+// Every word once (up to n), then repeats to fill the round, with no word twice in a row.
+function buildRound(pool, n) {
+  const out = [], rest = pool.slice();
+  while (out.length < n && rest.length) { const w = weightedPick(rest); out.push(w); rest.splice(rest.indexOf(w), 1); }
+  while (out.length < n) out.push(weightedPick(pool));
+  let words = shuffle(out);
+  for (let tries = 0; tries < 200 && words.some((w, i) => i > 0 && sameWord(w, words[i - 1])); tries++) words = shuffle(out);
+  return words;
+}
+function makeQuestion(answer) {
+  let distractPool = selectedWords().filter(w => !sameWord(w, answer) && w.mean !== answer.mean);
+  if (distractPool.length < 3) distractPool = allWords().filter(w => !sameWord(w, answer) && w.mean !== answer.mean);
+  return { answer, options: shuffle([answer, ...shuffle(distractPool).slice(0, 3)]), picked: null };
+}
+function startRound(words, practice = false) {
+  round = words.length ? { words, i: 0, right: 0, missed: [], practice, q: makeQuestion(words[0]) } : null;
+}
+function finishRound() {
+  round.q = null;
+  if (round.practice) return;
+  state.best = state.best || {};
+  const prev = state.best[state.set];
+  round.newBest = prev !== undefined && round.right > prev;
+  if (prev === undefined || round.right > prev) { state.best[state.set] = round.right; saveState(); }
+}
+function renderQuizDone() {
+  const r = round, n = r.words.length, pct = r.right / n;
+  const [emoji, msg] = pct === 1 ? ["🌟", "Perfect score!"] : pct >= 0.8 ? ["🎉", "Great job!"] : pct >= 0.5 ? ["👍", "Nice work!"] : ["💪", "Good practice. Keep going!"];
+  const best = state.best && state.best[state.set];
+  let html = `<div class="card done">
+    <div style="font-size:56px;line-height:1">${emoji}</div>
+    <h2 style="margin-top:10px">${msg}</h2>
+    <div style="font-size:44px;font-weight:600;margin:6px 0">${r.right}<span class="muted" style="font-size:24px"> / ${n}</span></div>
+    ${r.practice ? `<p class="muted small">Practice round</p>`
+      : r.newBest ? `<p style="color:var(--good);font-weight:500">New best for ${esc(setName())}! 🏆</p>`
+      : best !== undefined ? `<p class="muted small">Best for ${esc(setName())}: ${best} / ${ROUND_LEN}</p>` : ""}`;
+  if (r.missed.length) {
+    html += `<div style="text-align:left;margin:16px 0 4px" class="small muted">Words to practice:</div><div class="card wl" style="box-shadow:none;text-align:left">` +
+      r.missed.map(w => `<div class="wl-item" style="cursor:default">${heSpan(w.he)}<div class="info"><div class="m">${esc(w.mean)}</div><div class="small muted">${esc(w.pron)}</div></div>
+        <button class="hear" data-speak="${esc(w.he)}" aria-label="Hear ${esc(w.mean)}">🔊</button></div>`).join("") + `</div>`;
+  }
+  html += `<div class="row" style="justify-content:center;flex-wrap:wrap;margin-top:18px">
+      <button class="btn primary" data-act="newround">New round</button>
+      ${r.missed.length ? `<button class="btn" data-act="practice">Practice missed (${r.missed.length})</button>` : ""}
+    </div></div>`;
+  return html;
+}
+function setName() { return state.set === ALL ? "All sets" : CONTENT.find(c => c.id === state.set).label; }
+
 function renderQuiz() {
-  if (!quiz) newQuestion();
+  if (!round) startRound(buildRound(selectedWords(), ROUND_LEN));
   const dirSeg = `<div class="seg" role="group" aria-label="Quiz direction">
       <button data-dir="he-en" aria-pressed="${state.quizDir === "he-en"}">Hebrew → English</button>
       <button data-dir="en-he" aria-pressed="${state.quizDir === "en-he"}">English → Hebrew</button>
     </div>`;
-  let html = `<div class="deck-head">${dirSeg}<span class="spacer"></span><span class="small muted">${quizScore.right}/${quizScore.total}</span></div>`;
-  if (!quiz) return html + `<div class="card empty muted">No words in this set yet.</div>`;
-  const { answer, options, picked } = quiz;
+  let html = `<div class="deck-head">${dirSeg}</div>`;
+  if (!round) return html + `<div class="card empty muted">No words in this set yet.</div>`;
+  if (!round.q) return html + renderQuizDone();
+  const n = round.words.length, done = round.i + (round.q.picked !== null ? 1 : 0);
+  html += `<div class="progress"><div style="width:${(done / n) * 100}%"></div></div>`;
+  html += `<div class="row small muted" style="margin-bottom:8px"><span>Question ${round.i + 1} of ${n}${round.practice ? " · practice" : ""}</span><span class="spacer"></span><span>✅ ${round.right}</span></div>`;
+  const { answer, options, picked } = round.q;
   const heToEn = state.quizDir === "he-en";
   html += `<div class="card quiz-q">
       ${heToEn ? heSpan(answer.he, "prompt-he") : `<div class="prompt-en">${esc(answer.mean)}</div>`}
@@ -583,7 +631,8 @@ function renderQuiz() {
   if (picked !== null) {
     const ok = options[picked] === answer;
     html += `<div class="feedback">${ok ? "✅ Correct!" : "Not quite."} ${heSpan(answer.he)} <b>${esc(answer.pron)}</b> = ${esc(answer.mean)}</div>`;
-    html += `<div class="row" style="justify-content:center;margin-top:10px">${heToEn ? "" : hearBtn(answer.he)}<button class="btn primary" data-act="next">Next →</button></div>`;
+    const last = round.i + 1 >= n;
+    html += `<div class="row" style="justify-content:center;margin-top:10px">${heToEn ? "" : hearBtn(answer.he)}<button class="btn primary" data-act="next">${last ? "See my score 🎉" : "Next →"}</button></div>`;
   }
   return html;
 }
@@ -639,19 +688,26 @@ view.addEventListener("click", e => {
   }
   if (d.reveal) { revealed.has(d.reveal) ? revealed.delete(d.reveal) : revealed.add(d.reveal); render(); return; }
   if (d.opt !== undefined) {
-    if (!quiz || quiz.picked !== null) return;
-    quiz.picked = Number(d.opt);
-    quizScore.total++;
-    if (quiz.options[quiz.picked] === quiz.answer) quizScore.right++;
+    const q = round && round.q;
+    if (!q || q.picked !== null) return;
+    q.picked = Number(d.opt);
+    if (q.options[q.picked] === q.answer) round.right++;
+    else if (!round.missed.some(w => sameWord(w, q.answer))) round.missed.push(q.answer);
     render(); return;
   }
-  if (d.dir) { state.quizDir = d.dir; saveState(); newQuestion(); render(); return; }
+  if (d.dir) { state.quizDir = d.dir; saveState(); render(); return; }
 
   switch (d.act) {
     case "flip": flipped = !flipped; render(); break;
     case "shuffle": resetDeck(true); render(); toast("Shuffled"); break;
     case "again": resetDeck(true); render(); break;
-    case "next": newQuestion(); render(); break;
+    case "next":
+      round.i++;
+      if (round.i < round.words.length) round.q = makeQuestion(round.words[round.i]);
+      else finishRound();
+      render(); window.scrollTo(0, 0); break;
+    case "newround": startRound(buildRound(selectedWords(), ROUND_LEN)); render(); window.scrollTo(0, 0); break;
+    case "practice": startRound(shuffle(round.missed), true); render(); window.scrollTo(0, 0); break;
     case "reset": {
       const label = state.set === ALL ? "all sets" : CONTENT.find(c => c.id === state.set).label;
       if (!confirm(`Reset progress for ${label}?`)) break;
