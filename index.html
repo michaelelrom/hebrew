@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Hebrew">
+<meta name="theme-color" content="#f6f4ef" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#14161a" media="(prefers-color-scheme: dark)">
+<title>Hebrew</title>
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="icon" type="image/png" href="icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@400;500;700&family=Rubik:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f6f4ef;
+    --surface: #ffffff;
+    --surface-2: #efece4;
+    --text: #1d1f23;
+    --muted: #6b6f78;
+    --line: #e2ded4;
+    --accent: #1f5fbf;
+    --accent-soft: #e3ecfa;
+    --good: #1f8a4c;
+    --good-soft: #e1f3e8;
+    --warn: #b86a00;
+    --warn-soft: #fbefdc;
+    --bad: #c23b3b;
+    --bad-soft: #f8e2e2;
+    --shadow: 0 1px 2px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.06);
+    --radius: 18px;
+    --he: "Frank Ruhl Libre", "Times New Roman", serif;
+    --ui: "Rubik", -apple-system, system-ui, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14161a;
+      --surface: #1e2127;
+      --surface-2: #272b33;
+      --text: #eceef2;
+      --muted: #9aa0ab;
+      --line: #2f343d;
+      --accent: #6aa2ff;
+      --accent-soft: #1d2b44;
+      --good: #4cc27f;
+      --good-soft: #17301f;
+      --warn: #f0a640;
+      --warn-soft: #362812;
+      --bad: #f07272;
+      --bad-soft: #3a1c1c;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 16px rgba(0,0,0,.25);
+    }
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--ui);
+    font-size: 16px;
+    line-height: 1.4;
+    min-height: 100vh;
+    min-height: 100dvh;
+    -webkit-text-size-adjust: 100%;
+  }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  select { font: inherit; color: inherit; }
+
+  .he { font-family: var(--he); direction: rtl; unicode-bidi: isolate; }
+
+  header {
+    position: sticky; top: 0; z-index: 5;
+    background: var(--bg);
+    padding: calc(env(safe-area-inset-top) + 10px) calc(env(safe-area-inset-right) + 16px) 10px calc(env(safe-area-inset-left) + 16px);
+    border-bottom: 1px solid var(--line);
+  }
+  .bar { display: flex; align-items: center; gap: 10px; max-width: 640px; margin: 0 auto; }
+  .title { font-weight: 600; font-size: 19px; margin-right: auto; display: flex; align-items: baseline; gap: 8px; }
+  .title .he { font-size: 24px; font-weight: 700; color: var(--accent); }
+  .controls { display: flex; gap: 8px; max-width: 640px; margin: 10px auto 0; }
+  .pill {
+    border: 1px solid var(--line); background: var(--surface);
+    border-radius: 999px; padding: 8px 14px; font-size: 14px;
+    display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+  }
+  select.pill { appearance: none; -webkit-appearance: none; padding-right: 30px; flex: 1; min-width: 0;
+    background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+    background-position: calc(100% - 17px) 55%, calc(100% - 12px) 55%;
+    background-size: 5px 5px; background-repeat: no-repeat; }
+  .pill[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+
+  main {
+    max-width: 640px; margin: 0 auto;
+    padding: 16px calc(env(safe-area-inset-right) + 16px) calc(env(safe-area-inset-bottom) + 96px) calc(env(safe-area-inset-left) + 16px);
+  }
+
+  nav.tabs {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 5;
+    display: flex; justify-content: center;
+    background: color-mix(in srgb, var(--bg) 88%, transparent);
+    -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+    border-top: 1px solid var(--line);
+    padding: 6px calc(env(safe-area-inset-right) + 8px) calc(env(safe-area-inset-bottom) + 6px) calc(env(safe-area-inset-left) + 8px);
+  }
+  nav.tabs .inner { display: flex; width: 100%; max-width: 640px; }
+  nav.tabs button {
+    flex: 1; border: 0; background: none; padding: 8px 4px 6px;
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    font-size: 12px; color: var(--muted); border-radius: 12px;
+  }
+  nav.tabs button .ico { font-size: 20px; line-height: 1; }
+  nav.tabs button[aria-selected="true"] { color: var(--accent); font-weight: 500; }
+
+  .card {
+    background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow);
+    border: 1px solid var(--line);
+  }
+  .muted { color: var(--muted); }
+  .small { font-size: 13px; }
+  .row { display: flex; align-items: center; gap: 8px; }
+  .spacer { flex: 1; }
+
+  .btn {
+    border: 1px solid var(--line); background: var(--surface); border-radius: 14px;
+    padding: 14px 16px; font-weight: 500; font-size: 16px;
+  }
+  .btn:active { transform: scale(.98); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn.good { background: var(--good-soft); border-color: var(--good); color: var(--good); }
+  .btn.warn { background: var(--warn-soft); border-color: var(--warn); color: var(--warn); }
+  .btn.ghost { background: none; }
+  .btn.sm { padding: 8px 12px; font-size: 14px; border-radius: 12px; }
+  .hear { border: 1px solid var(--line); background: var(--surface-2); border-radius: 999px; padding: 6px 12px; font-size: 14px; }
+
+  /* Cards */
+  .deck-head { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+  .progress { height: 6px; background: var(--surface-2); border-radius: 99px; overflow: hidden; margin-bottom: 14px; }
+  .progress > div { height: 100%; background: var(--accent); border-radius: 99px; transition: width .25s; }
+  .flash {
+    min-height: 300px; padding: 24px 20px; text-align: center;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+    user-select: none; -webkit-user-select: none;
+  }
+  .flash .big { font-size: 64px; line-height: 1.2; font-weight: 500; }
+  .flash .pron { font-size: 22px; font-weight: 500; letter-spacing: .3px; }
+  .flash .mean { font-size: 22px; }
+  .flash .note { font-size: 15px; background: var(--surface-2); border-radius: 12px; padding: 10px 12px; max-width: 420px; }
+  .flash .hint { font-size: 13px; }
+  .status-tag { font-size: 12px; padding: 3px 9px; border-radius: 99px; }
+  .status-tag.known { background: var(--good-soft); color: var(--good); }
+  .status-tag.learning { background: var(--warn-soft); color: var(--warn); }
+  .answer-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+  .done { padding: 32px 20px; text-align: center; }
+  .done h2 { margin: 0 0 6px; font-size: 22px; }
+  .done .stats { display: flex; justify-content: center; gap: 18px; margin: 14px 0 20px; }
+  .done .stats b { display: block; font-size: 28px; }
+  .seg { display: inline-flex; background: var(--surface-2); border-radius: 12px; padding: 3px; }
+  .seg button { border: 0; background: none; padding: 7px 12px; border-radius: 9px; font-size: 14px; color: var(--muted); }
+  .seg button[aria-pressed="true"] { background: var(--surface); color: var(--text); box-shadow: var(--shadow); font-weight: 500; }
+
+  /* Sentences */
+  .sent { padding: 16px 18px; margin-bottom: 12px; }
+  .sent .he-line { font-size: 30px; line-height: 1.45; text-align: right; }
+  .sent .reveal { border-top: 1px dashed var(--line); margin-top: 12px; padding-top: 12px; }
+  .sent .pron { font-weight: 500; }
+  .sent .new { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { background: var(--accent-soft); color: var(--text); border-radius: 10px; padding: 5px 10px; font-size: 14px; }
+  .chip .he { font-size: 18px; color: var(--accent); }
+  .tap-hint { font-size: 13px; color: var(--muted); }
+
+  /* Quiz */
+  .quiz-q { padding: 26px 20px; text-align: center; margin-bottom: 14px; }
+  .quiz-q .prompt-he { font-size: 56px; line-height: 1.2; }
+  .quiz-q .prompt-en { font-size: 28px; font-weight: 500; }
+  .opts { display: grid; gap: 10px; }
+  .opt {
+    text-align: center; border: 1px solid var(--line); background: var(--surface);
+    border-radius: 14px; padding: 14px; font-size: 18px; box-shadow: var(--shadow);
+  }
+  .opt.he-opt { font-family: var(--he); font-size: 30px; padding: 10px; direction: rtl; }
+  .opt.right { background: var(--good-soft); border-color: var(--good); color: var(--good); }
+  .opt.wrong { background: var(--bad-soft); border-color: var(--bad); color: var(--bad); }
+  .opt:disabled { cursor: default; }
+  .feedback { text-align: center; margin: 14px 0 6px; min-height: 24px; }
+
+  /* Word list */
+  .group-title { font-size: 13px; font-weight: 600; letter-spacing: .6px; text-transform: uppercase; color: var(--muted); margin: 18px 4px 8px; }
+  .group-title:first-child { margin-top: 0; }
+  .wl { overflow: hidden; }
+  .wl-item { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-top: 1px solid var(--line); }
+  .wl-item:first-child { border-top: 0; }
+  .wl-item .he { font-size: 28px; min-width: 88px; text-align: right; }
+  .wl-item .info { flex: 1; min-width: 0; }
+  .wl-item .info .m { font-weight: 500; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--line); flex: none; }
+  .dot.known { background: var(--good); }
+  .dot.learning { background: var(--warn); }
+  .legend { display: flex; gap: 14px; font-size: 13px; color: var(--muted); margin: 0 4px 12px; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+
+  .toast {
+    position: fixed; left: 50%; transform: translateX(-50%);
+    bottom: calc(env(safe-area-inset-bottom) + 84px);
+    background: var(--text); color: var(--bg); padding: 10px 14px; border-radius: 12px;
+    font-size: 14px; max-width: calc(100% - 32px); box-shadow: var(--shadow); z-index: 10;
+    opacity: 0; pointer-events: none; transition: opacity .2s;
+  }
+  .toast.show { opacity: 1; }
+  .empty { text-align: center; padding: 40px 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <div class="title"><span class="he" lang="he">עִבְרִית</span> Hebrew</div>
+    <button class="pill" id="vowelBtn" aria-pressed="true">Vowel marks</button>
+  </div>
+  <div class="controls">
+    <select class="pill" id="setSelect" aria-label="Which set to study"></select>
+  </div>
+</header>
+
+<main id="view"></main>
+
+<nav class="tabs" aria-label="Sections">
+  <div class="inner" role="tablist">
+    <button role="tab" data-tab="cards"><span class="ico">🃏</span>Cards</button>
+    <button role="tab" data-tab="sentences"><span class="ico">💬</span>Sentences</button>
+    <button role="tab" data-tab="quiz"><span class="ico">✅</span>Quiz</button>
+    <button role="tab" data-tab="words"><span class="ico">📖</span>All words</button>
+  </div>
+</nav>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+// ============================================================
+// CONTENT: add a new set at the end each week.
+// Never change existing set ids or word ids (progress is keyed on them).
+// word:     { id, he, pron, mean, note? }
+// sentence: { he, pron, mean, new?: [{ he, pron, mean }] }
+// ============================================================
+const CONTENT = [
+  {
+    id: "set-01",
+    label: "Week 1",
+    words: [
+      { id: "w01", he: "שָׁלוֹם", pron: "sha-LOM", mean: "hello / goodbye / peace", note: "The dot on the top right of שׁ makes it \"sh.\"" },
+      { id: "w02", he: "תּוֹדָה", pron: "to-DA", mean: "thank you", note: "ת always sounds like \"t,\" with or without the dot inside." },
+      { id: "w03", he: "בַּיִת", pron: "BA-yit", mean: "house, home", note: "The dot inside בּ makes it \"b.\" Without the dot, ב is \"v.\"" },
+      { id: "w04", he: "מַיִם", pron: "MA-yim", mean: "water", note: "Water is always plural in Hebrew. There's no \"one water.\"" },
+      { id: "w05", he: "לֶחֶם", pron: "LE-chem", mean: "bread", note: "ח is the throaty \"ch\" sound, like in \"Bach.\"" },
+      { id: "w06", he: "סֵפֶר", pron: "SE-fer", mean: "book", note: "פ without a dot is \"f.\" With a dot (פּ) it's \"p.\"" },
+      { id: "w07", he: "יֶלֶד", pron: "YE-led", mean: "boy, child" },
+      { id: "w08", he: "אִמָּא", pron: "I-ma", mean: "mom", note: "א makes no sound of its own. It just holds the vowel." },
+      { id: "w09", he: "אַבָּא", pron: "A-ba", mean: "dad" },
+      { id: "w10", he: "כֶּלֶב", pron: "KE-lev", mean: "dog", note: "כּ with a dot is \"k.\" The ב at the end has no dot, so it's \"v.\"" }
+    ],
+    sentences: [
+      { he: "זֶה כֶּלֶב.", pron: "ze KE-lev.", mean: "This is a dog.",
+        new: [{ he: "זֶה", pron: "ze", mean: "this (is)" }] },
+      { he: "זֶה הַבַּיִת.", pron: "ze ha-BA-yit.", mean: "This is the house.",
+        new: [{ he: "זֶה", pron: "ze", mean: "this (is)" }, { he: "הַ", pron: "ha", mean: "the" }] },
+      { he: "שָׁלוֹם, אִמָּא!", pron: "sha-LOM, I-ma!", mean: "Hi, Mom!" },
+      { he: "תּוֹדָה, אַבָּא!", pron: "to-DA, A-ba!", mean: "Thanks, Dad!" },
+      { he: "יֵשׁ לֶחֶם.", pron: "yesh LE-chem.", mean: "There is bread.",
+        new: [{ he: "יֵשׁ", pron: "yesh", mean: "there is" }] },
+      { he: "יֵשׁ מַיִם בַּבַּיִת.", pron: "yesh MA-yim ba-BA-yit.", mean: "There is water in the house.",
+        new: [{ he: "יֵשׁ", pron: "yesh", mean: "there is" }, { he: "בַּ", pron: "ba", mean: "in the" }] },
+      { he: "הַיֶּלֶד קוֹרֵא סֵפֶר.", pron: "ha-YE-led ko-RE SE-fer.", mean: "The boy reads a book.",
+        new: [{ he: "הַ", pron: "ha", mean: "the" }, { he: "קוֹרֵא", pron: "ko-RE", mean: "reads (he)" }] },
+      { he: "הַכֶּלֶב שׁוֹתֶה מַיִם.", pron: "ha-KE-lev sho-TE MA-yim.", mean: "The dog drinks water.",
+        new: [{ he: "הַ", pron: "ha", mean: "the" }, { he: "שׁוֹתֶה", pron: "sho-TE", mean: "drinks (he)" }] },
+      { he: "אִמָּא אוֹכֶלֶת לֶחֶם.", pron: "I-ma o-CHE-let LE-chem.", mean: "Mom eats bread.",
+        new: [{ he: "אוֹכֶלֶת", pron: "o-CHE-let", mean: "eats (she)" }] },
+      { he: "אַבָּא קוֹרֵא סֵפֶר בַּבַּיִת.", pron: "A-ba ko-RE SE-fer ba-BA-yit.", mean: "Dad reads a book at home.",
+        new: [{ he: "קוֹרֵא", pron: "ko-RE", mean: "reads (he)" }, { he: "בַּ", pron: "ba", mean: "in the" }] }
+    ]
+  }
+];
+
+// ============================================================
+// App
+// ============================================================
+const STORE_KEY = "hebrew-flashcards-v1";
+const ALL = "all";
+
+const defaults = { progress: {}, vowels: true, set: CONTENT[CONTENT.length - 1].id, tab: "cards", quizDir: "he-en", cardFilter: "all" };
+let state = loadState();
+
+function loadState() {
+  try {
+    const s = JSON.parse(localStorage.getItem(STORE_KEY)) || {};
+    const merged = Object.assign({}, defaults, s);
+    if (merged.set !== ALL && !CONTENT.some(c => c.id === merged.set)) merged.set = defaults.set;
+    return merged;
+  } catch (e) { return Object.assign({}, defaults); }
+}
+function saveState() {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) {}
+}
+
+// Strip nikkud and cantillation (U+0591–U+05C7) but keep the maqaf (U+05BE).
+function stripNikkud(s) { return s.replace(/[֑-ֽֿ-ׇ]/g, ""); }
+function heb(s) { return state.vowels ? s : stripNikkud(s); }
+function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+function heSpan(s, cls = "") { return `<span class="he ${cls}" lang="he" dir="rtl">${esc(heb(s))}</span>`; }
+
+function key(setId, wordId) { return setId + ":" + wordId; }
+function statusOf(w) { return state.progress[key(w.setId, w.id)]; }
+function setStatus(w, st) { state.progress[key(w.setId, w.id)] = st; saveState(); }
+
+function selectedSets() { return state.set === ALL ? CONTENT : CONTENT.filter(c => c.id === state.set); }
+function allWords() { return CONTENT.flatMap(c => c.words.map(w => Object.assign({ setId: c.id }, w))); }
+function selectedWords() { return selectedSets().flatMap(c => c.words.map(w => Object.assign({ setId: c.id }, w))); }
+function shuffle(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+
+// ---------- Speech ----------
+let heVoice = null;
+function pickVoice() {
+  if (!("speechSynthesis" in window)) return;
+  const vs = speechSynthesis.getVoices();
+  heVoice = vs.find(v => /^he/i.test(v.lang)) || vs.find(v => /^iw/i.test(v.lang)) || null;
+}
+if ("speechSynthesis" in window) {
+  pickVoice();
+  speechSynthesis.addEventListener("voiceschanged", pickVoice);
+}
+function speak(text) {
+  if (!("speechSynthesis" in window)) { toast("This browser can't speak."); return; }
+  pickVoice();
+  if (!heVoice) {
+    toast("No Hebrew voice found. On iPhone: Settings › Accessibility › Spoken Content › Voices › Hebrew.");
+  }
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = "he-IL";
+  if (heVoice) u.voice = heVoice;
+  u.rate = 0.8;
+  speechSynthesis.speak(u);
+}
+function hearBtn(text) { return `<button class="hear" data-speak="${esc(text)}" aria-label="Hear it">🔊 Hear it</button>`; }
+
+let toastTimer;
+function toast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.classList.add("show");
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), 3500);
+}
+
+// ---------- Header ----------
+const setSelect = document.getElementById("setSelect");
+const vowelBtn = document.getElementById("vowelBtn");
+function renderHeader() {
+  setSelect.innerHTML = CONTENT.map(c => `<option value="${c.id}">${esc(c.label)} (${c.words.length} words)</option>`).join("")
+    + (CONTENT.length > 1 ? `<option value="${ALL}">All sets (${allWords().length} words)</option>` : "");
+  setSelect.value = state.set;
+  vowelBtn.setAttribute("aria-pressed", String(state.vowels));
+  vowelBtn.textContent = state.vowels ? "Vowel marks: on" : "Vowel marks: off";
+  document.querySelectorAll("nav.tabs button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.tab === state.tab)));
+}
+setSelect.addEventListener("change", () => { state.set = setSelect.value; saveState(); resetDeck(); resetQuiz(); render(); });
+vowelBtn.addEventListener("click", () => { state.vowels = !state.vowels; saveState(); render(); });
+document.querySelectorAll("nav.tabs button").forEach(b => b.addEventListener("click", () => {
+  state.tab = b.dataset.tab; saveState(); render(); window.scrollTo(0, 0);
+}));
+
+// ---------- Cards ----------
+let deck = null, deckIdx = 0, flipped = false, deckStats = { known: 0, learning: 0 };
+function resetDeck(doShuffle = false) {
+  let ws = selectedWords();
+  if (state.cardFilter === "learning") ws = ws.filter(w => statusOf(w) !== "known");
+  deck = doShuffle ? shuffle(ws) : ws;
+  deckIdx = 0; flipped = false; deckStats = { known: 0, learning: 0 };
+}
+function renderCards() {
+  if (!deck) resetDeck();
+  const filterSeg = `<div class="seg" role="group" aria-label="Which cards">
+      <button data-filter="all" aria-pressed="${state.cardFilter === "all"}">All</button>
+      <button data-filter="learning" aria-pressed="${state.cardFilter === "learning"}">Not known yet</button>
+    </div>`;
+  let html = `<div class="deck-head">${filterSeg}<span class="spacer"></span><button class="btn sm ghost" data-act="shuffle">🔀 Shuffle</button></div>`;
+
+  if (deck.length === 0) {
+    html += `<div class="card empty"><h2 style="margin:0 0 6px">You know them all! 🎉</h2>
+      <p class="muted">Every word in this set is marked "I know it."</p>
+      <button class="btn primary" data-filter="all">Review all cards</button></div>`;
+    return html;
+  }
+  if (deckIdx >= deck.length) {
+    html += `<div class="card done"><h2>Nice work! 🎉</h2><p class="muted">You went through ${deck.length} card${deck.length === 1 ? "" : "s"}.</p>
+      <div class="stats"><div><b style="color:var(--good)">${deckStats.known}</b><span class="small muted">I know it</span></div>
+      <div><b style="color:var(--warn)">${deckStats.learning}</b><span class="small muted">Still learning</span></div></div>
+      <div class="row" style="justify-content:center;flex-wrap:wrap">
+        <button class="btn primary" data-act="again">Go again</button>
+        ${deckStats.learning ? `<button class="btn" data-filter="learning">Just the ones I'm learning</button>` : ""}
+      </div></div>`;
+    return html;
+  }
+  const w = deck[deckIdx];
+  const st = statusOf(w);
+  const tag = st === "known" ? `<span class="status-tag known">Known</span>` : st === "learning" ? `<span class="status-tag learning">Learning</span>` : "";
+  html += `<div class="progress"><div style="width:${(deckIdx / deck.length) * 100}%"></div></div>`;
+  html += `<div class="row small muted" style="margin-bottom:8px"><span>Card ${deckIdx + 1} of ${deck.length}</span><span class="spacer"></span>${tag}</div>`;
+  html += `<div class="card flash" data-act="flip" role="button" aria-label="Flip card">
+      ${heSpan(w.he, "big")}
+      ${flipped
+        ? `<div class="pron">${esc(w.pron)}</div><div class="mean">${esc(w.mean)}</div>${w.note ? `<div class="note">${esc(w.note)}</div>` : ""}`
+        : `<div class="hint muted">Tap to flip</div>`}
+      ${hearBtn(w.he)}
+    </div>`;
+  html += flipped
+    ? `<div class="answer-row"><button class="btn warn" data-mark="learning">Still learning</button><button class="btn good" data-mark="known">I know it</button></div>`
+    : `<div class="answer-row"><button class="btn" data-act="flip" style="grid-column:1/-1">Show answer</button></div>`;
+  return html;
+}
+
+// ---------- Sentences ----------
+const revealed = new Set();
+function renderSentences() {
+  const sets = selectedSets();
+  let html = `<p class="tap-hint" style="margin:0 4px 12px">Try reading each sentence out loud, then tap it to check.</p>`;
+  sets.forEach(c => {
+    if (sets.length > 1) html += `<div class="group-title">${esc(c.label)}</div>`;
+    c.sentences.forEach((s, i) => {
+      const k = c.id + ":" + i, open = revealed.has(k);
+      html += `<div class="card sent" data-reveal="${k}" role="button" aria-expanded="${open}">
+        <div class="he-line">${heSpan(s.he)}</div>
+        ${open ? `<div class="reveal">
+            <div class="pron">${esc(s.pron)}</div>
+            <div>${esc(s.mean)}</div>
+            ${s.new && s.new.length ? `<div class="new">${s.new.map(n => `<span class="chip">${heSpan(n.he)} ${esc(n.pron)} = ${esc(n.mean)}</span>`).join("")}</div>` : ""}
+            <div style="margin-top:12px">${hearBtn(s.he)}</div>
+          </div>` : `<div class="tap-hint" style="margin-top:6px">Tap to reveal</div>`}
+      </div>`;
+    });
+  });
+  return html;
+}
+
+// ---------- Quiz ----------
+let quiz = null, quizScore = { right: 0, total: 0 }, lastQuizWord = null;
+function resetQuiz() { quiz = null; quizScore = { right: 0, total: 0 }; }
+function newQuestion() {
+  const pool = selectedWords();
+  if (pool.length === 0) { quiz = null; return; }
+  let cands = pool.filter(w => key(w.setId, w.id) !== lastQuizWord);
+  if (cands.length === 0) cands = pool;
+  // Lean a little toward words that aren't known yet.
+  const weighted = cands.flatMap(w => statusOf(w) === "known" ? [w] : [w, w]);
+  const answer = weighted[Math.floor(Math.random() * weighted.length)];
+  lastQuizWord = key(answer.setId, answer.id);
+  let distractPool = pool.filter(w => w !== answer && w.mean !== answer.mean);
+  if (distractPool.length < 3) distractPool = allWords().filter(w => !(w.setId === answer.setId && w.id === answer.id) && w.mean !== answer.mean);
+  const options = shuffle([answer, ...shuffle(distractPool).slice(0, 3)]);
+  quiz = { answer, options, picked: null };
+}
+function renderQuiz() {
+  if (!quiz) newQuestion();
+  const dirSeg = `<div class="seg" role="group" aria-label="Quiz direction">
+      <button data-dir="he-en" aria-pressed="${state.quizDir === "he-en"}">Hebrew → English</button>
+      <button data-dir="en-he" aria-pressed="${state.quizDir === "en-he"}">English → Hebrew</button>
+    </div>`;
+  let html = `<div class="deck-head">${dirSeg}<span class="spacer"></span><span class="small muted">${quizScore.right}/${quizScore.total}</span></div>`;
+  if (!quiz) return html + `<div class="card empty muted">No words in this set yet.</div>`;
+  const { answer, options, picked } = quiz;
+  const heToEn = state.quizDir === "he-en";
+  html += `<div class="card quiz-q">
+      ${heToEn ? heSpan(answer.he, "prompt-he") : `<div class="prompt-en">${esc(answer.mean)}</div>`}
+      ${heToEn ? `<div style="margin-top:12px">${hearBtn(answer.he)}</div>` : ""}
+    </div>`;
+  html += `<div class="opts">` + options.map((o, i) => {
+    let cls = "opt" + (heToEn ? "" : " he-opt");
+    if (picked !== null) {
+      if (o === answer) cls += " right";
+      else if (i === picked) cls += " wrong";
+    }
+    const label = heToEn ? esc(o.mean) : esc(heb(o.he));
+    return `<button class="${cls}" data-opt="${i}" ${picked !== null ? "disabled" : ""} ${heToEn ? "" : 'lang="he"'}>${label}</button>`;
+  }).join("") + `</div>`;
+  if (picked !== null) {
+    const ok = options[picked] === answer;
+    html += `<div class="feedback">${ok ? "✅ Correct!" : "Not quite."} ${heSpan(answer.he)} <b>${esc(answer.pron)}</b> = ${esc(answer.mean)}</div>`;
+    html += `<div class="row" style="justify-content:center;margin-top:10px">${heToEn ? "" : hearBtn(answer.he)}<button class="btn primary" data-act="next">Next →</button></div>`;
+  }
+  return html;
+}
+
+// ---------- All words ----------
+function renderWords() {
+  const sets = selectedSets();
+  let html = `<div class="legend"><span><i class="dot known"></i>I know it</span><span><i class="dot learning"></i>Still learning</span><span><i class="dot"></i>Not tried</span></div>`;
+  sets.forEach(c => {
+    html += `<div class="group-title">${esc(c.label)}</div><div class="card wl">`;
+    c.words.forEach(w0 => {
+      const w = Object.assign({ setId: c.id }, w0), st = statusOf(w) || "";
+      html += `<div class="wl-item">
+        <i class="dot ${st}"></i>
+        ${heSpan(w.he)}
+        <div class="info"><div class="m">${esc(w.mean)}</div><div class="small muted">${esc(w.pron)}</div></div>
+        <button class="hear" data-speak="${esc(w.he)}" aria-label="Hear ${esc(w.mean)}">🔊</button>
+      </div>`;
+    });
+    html += `</div>`;
+  });
+  html += `<div style="text-align:center;margin-top:24px"><button class="btn sm ghost muted" data-act="reset">Reset progress for ${state.set === ALL ? "all sets" : "this set"}</button></div>`;
+  return html;
+}
+
+// ---------- Render + events ----------
+const view = document.getElementById("view");
+function render() {
+  renderHeader();
+  view.innerHTML = state.tab === "cards" ? renderCards()
+    : state.tab === "sentences" ? renderSentences()
+    : state.tab === "quiz" ? renderQuiz()
+    : renderWords();
+}
+
+view.addEventListener("click", e => {
+  const speakEl = e.target.closest("[data-speak]");
+  if (speakEl) { e.stopPropagation(); speak(speakEl.dataset.speak); return; }
+
+  const t = e.target.closest("[data-act],[data-mark],[data-filter],[data-reveal],[data-opt],[data-dir]");
+  if (!t) return;
+  const d = t.dataset;
+
+  if (d.filter) { state.cardFilter = d.filter; saveState(); resetDeck(); render(); return; }
+  if (d.mark) {
+    const w = deck[deckIdx];
+    setStatus(w, d.mark);
+    deckStats[d.mark]++;
+    deckIdx++; flipped = false; render(); return;
+  }
+  if (d.reveal) { revealed.has(d.reveal) ? revealed.delete(d.reveal) : revealed.add(d.reveal); render(); return; }
+  if (d.opt !== undefined) {
+    if (!quiz || quiz.picked !== null) return;
+    quiz.picked = Number(d.opt);
+    quizScore.total++;
+    if (quiz.options[quiz.picked] === quiz.answer) quizScore.right++;
+    render(); return;
+  }
+  if (d.dir) { state.quizDir = d.dir; saveState(); newQuestion(); render(); return; }
+
+  switch (d.act) {
+    case "flip": flipped = !flipped; render(); break;
+    case "shuffle": resetDeck(true); render(); toast("Shuffled"); break;
+    case "again": resetDeck(true); render(); break;
+    case "next": newQuestion(); render(); break;
+    case "reset": {
+      const label = state.set === ALL ? "all sets" : CONTENT.find(c => c.id === state.set).label;
+      if (!confirm(`Reset progress for ${label}?`)) break;
+      selectedWords().forEach(w => delete state.progress[key(w.setId, w.id)]);
+      saveState(); resetDeck(); render(); break;
+    }
+  }
+});
+
+render();
+</script>
+</body>
+</html>
