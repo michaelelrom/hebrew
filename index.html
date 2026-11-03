@@ -203,6 +203,20 @@
   .legend { display: flex; gap: 14px; font-size: 13px; color: var(--muted); margin: 0 4px 12px; }
   .legend span { display: inline-flex; align-items: center; gap: 6px; }
 
+  /* Letter breakdown */
+  .letters { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; direction: rtl; }
+  .ltile {
+    display: flex; flex-direction: column; align-items: center; min-width: 62px;
+    background: var(--surface-2); border-radius: 12px; padding: 6px 6px 7px; direction: ltr;
+  }
+  .ltile .he { font-size: 34px; line-height: 1.25; color: var(--accent); }
+  .ltile .ln { font-size: 13px; font-weight: 500; }
+  .ltile .ls { font-size: 12px; color: var(--muted); }
+  .wl-item.open { background: var(--surface-2); }
+  .wl-letters { padding: 4px 14px 14px; background: var(--surface-2); }
+  .wl-letters .ltile { background: var(--surface); }
+  .wl-item { cursor: pointer; }
+
   .toast {
     position: fixed; left: 50%; transform: translateX(-50%);
     bottom: calc(env(safe-area-inset-bottom) + 84px);
@@ -320,6 +334,52 @@ function allWords() { return CONTENT.flatMap(c => c.words.map(w => Object.assign
 function selectedWords() { return selectedSets().flatMap(c => c.words.map(w => Object.assign({ setId: c.id }, w))); }
 function shuffle(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
 
+// ---------- Letter breakdown ----------
+// Name and sound for each letter. [name, sound]; "" sound = silent.
+const LETTERS = {
+  "א": ["Alef", ""], "ב": ["Vet", "v"], "בּ": ["Bet", "b"], "ג": ["Gimel", "g"], "ד": ["Dalet", "d"],
+  "ה": ["Hey", "h"], "ו": ["Vav", "v"], "ז": ["Zayin", "z"], "ח": ["Chet", "ch"], "ט": ["Tet", "t"],
+  "י": ["Yod", "y"], "כ": ["Chaf", "ch"], "כּ": ["Kaf", "k"], "ך": ["Final Chaf", "ch"], "ךּ": ["Final Kaf", "k"],
+  "ל": ["Lamed", "l"], "מ": ["Mem", "m"], "ם": ["Final Mem", "m"], "נ": ["Nun", "n"], "ן": ["Final Nun", "n"],
+  "ס": ["Samech", "s"], "ע": ["Ayin", ""], "פ": ["Fe", "f"], "פּ": ["Pe", "p"], "ף": ["Final Fe", "f"],
+  "צ": ["Tsadi", "ts"], "ץ": ["Final Tsadi", "ts"], "ק": ["Kuf", "k"], "ר": ["Resh", "r"],
+  "ש": ["Shin", "sh"], "שׁ": ["Shin", "sh"], "שׂ": ["Sin", "s"], "ת": ["Tav", "t"], "תּ": ["Tav", "t"]
+};
+const VOWELS = {
+  "ֱ": "e", "ֲ": "a", "ֳ": "o", "ִ": "i", "ֵ": "e", "ֶ": "e",
+  "ַ": "a", "ָ": "a", "ֹ": "o", "ֺ": "o", "ֻ": "u", "ׇ": "o"
+};
+const DAGESH = "ּ", SHIN_DOT = "ׁ", SIN_DOT = "ׂ";
+
+// Split a word into letters, each with its marks, and work out a name + sound.
+function breakdown(word) {
+  const clusters = [];
+  for (const ch of word) {
+    if (/[א-ת]/.test(ch)) clusters.push({ base: ch, marks: "" });
+    else if (/[֑-ֽֿ-ׇ]/.test(ch) && clusters.length) clusters[clusters.length - 1].marks += ch;
+  }
+  return clusters.map((c, i) => {
+    const m = c.marks, last = i === clusters.length - 1;
+    let k = c.base;
+    if (m.includes(DAGESH) && LETTERS[c.base + DAGESH]) k = c.base + DAGESH;
+    if (c.base === "ש") k = m.includes(SIN_DOT) ? "שׂ" : "שׁ";
+    let [name, sound] = LETTERS[k] || [c.base, ""];
+    const vowel = [...m].map(x => VOWELS[x]).find(Boolean) || "";
+    const prev = clusters[i - 1] ? [...clusters[i - 1].marks].map(x => VOWELS[x]).find(Boolean) : "";
+    if (c.base === "ו" && m.includes("ֹ")) return { glyph: c.base + m, name: "Vav", sound: "o" };
+    if (c.base === "ו" && m.includes(DAGESH) && !vowel) return { glyph: c.base + m, name: "Vav", sound: "u" };
+    if (c.base === "ה" && last && !m.includes(DAGESH) && !vowel) sound = "";
+    if (c.base === "י" && !vowel && (prev === "i" || prev === "e")) sound = "";
+    const full = sound + vowel;
+    return { glyph: c.base + m, name, sound: full || "silent" };
+  });
+}
+function lettersHtml(word) {
+  return `<div class="letters" aria-label="Letters">` + breakdown(word).map(l =>
+    `<div class="ltile">${heSpan(l.glyph)}<span class="ln">${esc(l.name)}</span><span class="ls">${esc(l.sound)}</span></div>`
+  ).join("") + `</div>`;
+}
+
 // ---------- Speech ----------
 let heVoice = null;
 function pickVoice() {
@@ -410,7 +470,7 @@ function renderCards() {
   html += `<div class="card flash" data-act="flip" role="button" aria-label="Flip card">
       ${heSpan(w.he, "big")}
       ${flipped
-        ? `<div class="pron">${esc(w.pron)}</div><div class="mean">${esc(w.mean)}</div>${w.note ? `<div class="note">${esc(w.note)}</div>` : ""}`
+        ? `<div class="pron">${esc(w.pron)}</div><div class="mean">${esc(w.mean)}</div>${lettersHtml(w.he)}${w.note ? `<div class="note">${esc(w.note)}</div>` : ""}`
         : `<div class="hint muted">Tap to flip</div>`}
       ${hearBtn(w.he)}
     </div>`;
@@ -492,6 +552,7 @@ function renderQuiz() {
 }
 
 // ---------- All words ----------
+const openWords = new Set();
 function renderWords() {
   const sets = selectedSets();
   let html = `<div class="legend"><span><i class="dot known"></i>I know it</span><span><i class="dot learning"></i>Still learning</span><span><i class="dot"></i>Not tried</span></div>`;
@@ -499,12 +560,13 @@ function renderWords() {
     html += `<div class="group-title">${esc(c.label)}</div><div class="card wl">`;
     c.words.forEach(w0 => {
       const w = Object.assign({ setId: c.id }, w0), st = statusOf(w) || "";
-      html += `<div class="wl-item">
+      const k = key(c.id, w.id), open = openWords.has(k);
+      html += `<div class="wl-item${open ? " open" : ""}" data-word="${k}" role="button" aria-expanded="${open}">
         <i class="dot ${st}"></i>
         ${heSpan(w.he)}
-        <div class="info"><div class="m">${esc(w.mean)}</div><div class="small muted">${esc(w.pron)}</div></div>
+        <div class="info"><div class="m">${esc(w.mean)}</div><div class="small muted">${esc(w.pron)}${open ? "" : " · tap for letters"}</div></div>
         <button class="hear" data-speak="${esc(w.he)}" aria-label="Hear ${esc(w.mean)}">🔊</button>
-      </div>`;
+      </div>${open ? `<div class="wl-letters">${lettersHtml(w.he)}</div>` : ""}`;
     });
     html += `</div>`;
   });
@@ -526,10 +588,11 @@ view.addEventListener("click", e => {
   const speakEl = e.target.closest("[data-speak]");
   if (speakEl) { e.stopPropagation(); speak(speakEl.dataset.speak); return; }
 
-  const t = e.target.closest("[data-act],[data-mark],[data-filter],[data-reveal],[data-opt],[data-dir]");
+  const t = e.target.closest("[data-act],[data-mark],[data-filter],[data-reveal],[data-opt],[data-dir],[data-word]");
   if (!t) return;
   const d = t.dataset;
 
+  if (d.word) { openWords.has(d.word) ? openWords.delete(d.word) : openWords.add(d.word); render(); return; }
   if (d.filter) { state.cardFilter = d.filter; saveState(); resetDeck(); render(); return; }
   if (d.mark) {
     const w = deck[deckIdx];
